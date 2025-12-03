@@ -3,7 +3,7 @@ const std = @import("std");
 const alloc = std.heap.smp_allocator;
 
 pub fn main() !void {
-    var joltage: u32 = 0;
+    var joltage: u128 = 0;
 
     const file = try std.fs.cwd().openFile("data/d3.txt", .{ .mode = .read_only });
     const readbuf = try alloc.alloc(u8, 512);
@@ -18,22 +18,34 @@ pub fn main() !void {
         reader.interface.toss(1); // Skip over the delimiter itself
         const line = linebuf[0..n];
 
-        var tens: u8 = 1;
-        var tens_i: usize = 0;
-        var ones: u8 = 1;
+        var places: [12]u128 = .{1} ** 12;
+
+        var start_i: usize = 0;
         var i: usize = 0;
-        while (i < line.len - 1) : (i += 1) {
-            const tens_candidate = try std.fmt.parseInt(u8, &.{line[i]}, 10);
-            if (tens_candidate > tens) {
-                tens = tens_candidate;
-                tens_i = i;
+        for (0..12) |places_i| {
+            i = start_i;
+            while (i < line.len - (11 - places_i)) : (i += 1) {
+                const candidate = try std.fmt.parseInt(u128, &.{line[i]}, 10);
+                if (candidate > places[places_i]) {
+                    places[places_i] = candidate;
+                    start_i = i + 1;
+                }
             }
         }
-        var j: usize = line.len - 1;
-        while (j > tens_i) : (j -= 1) {
-            ones = @max(ones, try std.fmt.parseInt(u8, &.{line[j]}, 10));
-        }
-        joltage += tens * 10 + ones;
+
+        joltage +=
+            places[0] * 100000000000 +
+            places[1] * 10000000000 +
+            places[2] * 1000000000 +
+            places[3] * 100000000 +
+            places[4] * 10000000 +
+            places[5] * 1000000 +
+            places[6] * 100000 +
+            places[7] * 10000 +
+            places[8] * 1000 +
+            places[9] * 100 +
+            places[10] * 10 +
+            places[11] * 1;
     }
 
     var stdout_w_buf: [2]u8 = undefined;
