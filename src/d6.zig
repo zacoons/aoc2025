@@ -9,6 +9,8 @@ const Col = struct {
 };
 
 pub fn main() !void {
+    var timer = try std.time.Timer.start();
+
     const file = try std.fs.cwd().readFileAlloc(alloc, "data/d6.txt", 1024 * 1024);
     const w = std.mem.indexOfScalar(u8, file, '\n').? + 1;
     const h = @divExact(file.len, w);
@@ -31,13 +33,18 @@ pub fn main() !void {
 
     var sum: u64 = 0;
 
+    var num_str = try std.ArrayList(u8).initCapacity(alloc, h - 1);
+    defer num_str.deinit(alloc);
     for (cols.items) |col| {
-        const col_w = col.end_x - col.start_x;
         var local_sum: u64 = if (col.op == '*') 1 else 0;
-        var i = col.start_x;
-        while (i < file.len - w) : (i += w) {
-            const num_str = std.mem.trim(u8, file[i .. i + col_w], &.{' '});
-            const num = try std.fmt.parseInt(u64, num_str, 10);
+        for (col.start_x..col.end_x) |x| { // Iter x values within col
+            num_str.clearRetainingCapacity();
+            var i = x;
+            while (i < file.len - w) : (i += w) { // Iter y values within col
+                try num_str.append(alloc, file[i]);
+            }
+            const num_str_trimmed = std.mem.trim(u8, num_str.items, &.{' '});
+            const num = try std.fmt.parseInt(u64, num_str_trimmed, 10);
             switch (col.op) {
                 '+' => local_sum += num,
                 '*' => local_sum *= num,
@@ -47,5 +54,5 @@ pub fn main() !void {
         sum += local_sum;
     }
 
-    std.debug.print("{}\n", .{sum});
+    std.debug.print("{} {D}\n", .{ sum, timer.read() });
 }
